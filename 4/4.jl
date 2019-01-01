@@ -13,16 +13,12 @@ function sortbydate(strarray::Array{String,1})
     dict = Dict{DateTime,String}()
     # extract the datetime and store it in an intermediate dictionary Dict{DateTime,String}
     for str in strarray
-        rgxres = match(r"^\[(?<datetime>.+)\]", str)
-        dt = DateTime(rgxres[:datetime], "yyyy-mm-dd HH:MM")
+        dt = DateTime(match(r"^\[(?<dt>.+)\]", str)[:dt], "yyyy-mm-dd HH:MM")
         dict[dt] = str
     end
-    # Collect the dictionary into an array Array{Pair{DateTime,String}} and sort it
-    dictsorted = sort(collect(dict))
-    # Create new array for storing the sorted strings
     strarraysorted = String[]
-    # Loop over the pairs in the array and extract the string into the new array
-    for pair in dictsorted
+    # sort(collect(dict)) changes Dict{DateTime,String} to a Array{Pair{DateTime,String}} sorted by DateTime
+    for pair in sort(collect(dict))
         push!(strarraysorted, pair[2])
     end
     strarraysorted
