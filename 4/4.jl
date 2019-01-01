@@ -26,29 +26,32 @@ end
 strarraysorted = sortbydate(strarray)
 DelimitedFiles.writedlm("4.out", strarraysorted, "\n")
 
+# Maybe a struct to hold the current status at each iteration would be a godsend here?
+
 let
-    dict = Dict{Int,Dict{Date,Array{Int}}}()
+    dict = Dict{Int,Array{Int}}()
     schedule = zeros(Int, 60)
     id = sleep_start = sleep_end = 0
+    firstloop = true
     for str in strarraysorted
         dt = DateTime(match(r"^\[(?<dt>.+)\]", str)[:dt], "yyyy-mm-dd HH:MM")
         re = match(r"Guard #(?<id>\d+)", str)
         if re isa RegexMatch
-            if schedule != zeros(Int, 60)
-                if haskey(dict, id)
-                    d = dict[id]
-                    d[Date(dt)] = schedule
-                else
-                    dict[id] = Dict(Date(dt) => schedule)
-                end
-                schedule = zeros(Int, 60)
+            if firstloop
+                id_curr = re[:id]
+                firstloop = false
+            else
+                id_prev = id_curr
+                id_curr = re[:id]
+                #> Insert entry for id_prev, schedule
+                    # I think date is not important to store because as long as the date differs we know we have to store a new schedule inside
             end
-            id = re[:id]
+            schedule = zeros(Int, 60)
         elseif match(r"falls asleep", str) isa RegexMatch
             sleep_start = Dates.minute(dt)
         elseif match(r"wakes up", str) isa RegexMatch
             sleep_end = Dates.minute(dt)
-            schedule[sleep_start+1:sleep_end+1] .= 1
+            schedule[sleep_start+1:sleep_end] .= 1
         end
     end
 end
