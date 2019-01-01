@@ -35,7 +35,7 @@ let
         re = match(r"Guard #(?<id>\d+)", str)
         if re isa RegexMatch
             if schedule != zeros(Int, 60)
-                if id in keys(dict)
+                if haskey(dict, id)
                     d = dict[id]
                     d[Date(dt)] = schedule
                 else
