@@ -69,10 +69,49 @@ function arraytodict(strarraysorted::Array{String})
     dict
 end
 
-mutable struct Laziest
+mutable struct FourA
+    """
+    Holds the status of the guard with the most hours slept
+    """
     id::Int
     hoursslept::Int
     worstminute::Int
+end
+
+mutable struct FourB
+    """
+    Holds the status of the guard who is asleep the most at a particular minute
+    """
+    id::Int
+    hoursslept::Int
+    worstminute::Int
+end
+
+function question4(dict::Dict{Int64,Array{Array{Int64,1},1}})
+    fourA = FourA(-1, -1, -1)
+    fourB = FourB(-1, -1, -1)
+    for id in keys(dict)
+        array2D = hcat(dict[id]...)
+        array1D = reduce(+, array2D, dims=2)
+        hoursslept_A = reduce(+, array1D, dims=1)[1,1]
+        worstminute = findmax(array1D, dims=1)[2][1,1][1] - 1
+        hoursslept_B = findmax(array1D, dims=1)[1][1,1]
+        println("#$id, $hoursslept_A total hours slept, slept the most ($hoursslept_B hours) at $worstminute min")
+        if hoursslept_A > fourA.hoursslept
+            fourA.id = id
+            fourA.hoursslept = hoursslept_A
+            fourA.worstminute = worstminute
+        end
+        if hoursslept_B > fourB.hoursslept
+            fourB.id = id
+            fourB.hoursslept = hoursslept_B
+            fourB.worstminute = worstminute
+        end
+    end
+    println("\nThe laziest guard is #$(fourA.id) ($(fourA.hoursslept) hours), sleeping the most at minute $(fourA.worstminute)")
+    println("$(fourA.id) x $(fourA.worstminute) is $(fourA.id * fourA.worstminute)")
+    println("\nThe guard who slept the most at a particular minute is #$(fourB.id), sleeping for $(fourB.hoursslept) hours at minute $(fourB.worstminute)")
+    println("$(fourB.id) x $(fourB.worstminute) is $(fourB.id * fourB.worstminute)")
 end
 
 function main()
@@ -80,21 +119,7 @@ function main()
     strarraysorted = sortbydate(strarray)
     DelimitedFiles.writedlm("4.out", strarraysorted, "\n")
     dict = arraytodict(strarraysorted)
-    laziestguard = Laziest(-1, -1, -1)
-    for id in keys(dict)
-        array2D = hcat(dict[id]...)
-        array1D = reduce(+, array2D, dims=2)
-        hoursslept = reduce(+, reduce(+, array2D, dims=2), dims=1)[1,1]
-        worstminute = findmax(array1D, dims=1)[2][1,1][1] - 1
-        println("$id, $hoursslept, $worstminute")
-        if hoursslept > laziestguard.hoursslept
-            laziestguard.id = id
-            laziestguard.hoursslept = hoursslept
-            laziestguard.worstminute = worstminute
-        end
-    end
-    laziestguard.id,laziestguard.hoursslept,laziestguard.worstminute
+    question4(dict)
 end
-#= sleep = max(reduce(+, hcat(dict[id]...), dims=2)...) =#
 
 isinteractive() || main()

@@ -12,6 +12,12 @@ silent! normal! zE
 6,24fold
 26,33fold
 35,70fold
+72,79fold
+90,115fold
+72
+normal! zo
+90
+normal! zo
 let &so = s:so_save | let &siso = s:siso_save
 doautoall SessionLoadPost
 " vim: set ft=vim :
