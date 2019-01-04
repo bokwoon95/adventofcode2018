@@ -1,47 +1,64 @@
-# old @time = 52.356412 seconds (76.84 k allocations: 12.560 MiB, 0.01% gc time)
-# TODO
-# ----
-# Change the algorithm such that it's a one-pass only!
-# Use a 'pointer' to keep track of what the last element inserted is
-# Whenever there's a reaction, delete the last element and move the pointer in by one
-# Combined with the IOBuffer, this should make the react() operation very fast
-# The only problem is figuring out how to 'pop' a character out of the IOBuffer
-function react(instring::String)
-    outstring = ""
+function react(instring::String, exclusionlist::Char...)
+    # old @time = 52.356412 seconds (76.84 k allocations: 12.560 MiB, 0.01% gc time)
+    # new @time = 0.007507 seconds (100.00 k allocations: 4.722 MiB)
     io = IOBuffer()
-    prevchar::Union{Char,Nothing} = nothing
-    loop = true; while loop
-        for i in 1:length(instring)
-            thischar = instring[i]
-            if prevchar isa Nothing
-                prevchar = thischar
-            elseif prevchar + 32 == thischar || thischar + 32 == prevchar
-                prevchar = nothing
-            elseif i == length(instring)
-                write(io, prevchar)
-                write(io, thischar)
-                prevchar = nothing
-            else
-                write(io, prevchar)
-                prevchar = thischar
-            end
+    for char in instring
+        if char in exclusionlist
+            continue
         end
-        outstring = String(take!(io))
-        @show length(instring)
-        @show length(outstring)
-        if length(instring) <= length(outstring)
-            loop = false; break
+        if position(io) != 0 && checkpolarity(char, nthchar(io, io.ptr - 1))
+            io.ptr -= 1
         else
-            instring = outstring
-            println("Feeding outstring back in as instring..\n")
+            write(io, char)
         end
     end
-    outstring
+    outstring = chomp(dumpstr(io, io.ptr - 1))
 end
 
 function main()
     bigstring = open("5.in", "r") do fh
         read(fh, String)
     end
-    react(bigstring)
+    # Question 5a
+    println("The length of the reacted polymer is $(length(react(bigstring)))")
+    # Question 5b
+    shortestlength::Union{Int,Nothing} = nothing
+    removedchar = '\0'
+    for ch in 'a':'z'
+        len = length(react(bigstring, ch, ch - 32))
+        if shortestlength isa Nothing || len < shortestlength
+            shortestlength = len
+            removedchar = ch
+        end
+    end
+    println("The shortest length possible is $shortestlength by removing $removedchar/$(removedchar - 32)")
+end
+
+# helper functions
+@inline function checkpolarity(c1::Char, c2::Char)
+    c1 + 32 == c2 || c2 + 32 == c1
+end
+@inline function dumpstr(io::IOBuffer)
+    "dump io as String"
+    ptr = io.ptr
+    seekstart(io)
+    str = String(map(Char, read(io)))
+    io.ptr = ptr
+    str
+end
+@inline function dumpstr(io::IOBuffer, int::Int)
+    "dump io as String up to `int` bytes"
+    ptr = io.ptr
+    seekstart(io)
+    str = String(map(Char, read(io, int)))
+    io.ptr = ptr
+    str
+end
+@inline function nthchar(io::IOBuffer, n::Int)
+    "Returns the nth character in io"
+    ptr = io.ptr
+    seek(io, n-1)
+    ch = n == 0 ? Char(0) : Char(read(io, 1)[1])
+    io.ptr = ptr
+    ch
 end

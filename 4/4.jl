@@ -108,8 +108,10 @@ function question4(dict::Dict{Int64,Array{Array{Int64,1},1}})
             fourB.worstminute = worstminute
         end
     end
+    # Question 4a
     println("\nThe laziest guard is #$(fourA.id) ($(fourA.hoursslept) hours), sleeping the most at minute $(fourA.worstminute)")
     println("$(fourA.id) x $(fourA.worstminute) is $(fourA.id * fourA.worstminute)")
+    # Qeustion 4b
     println("\nThe guard who slept the most at a particular minute is #$(fourB.id), sleeping for $(fourB.hoursslept) hours at minute $(fourB.worstminute)")
     println("$(fourB.id) x $(fourB.worstminute) is $(fourB.id * fourB.worstminute)")
 end

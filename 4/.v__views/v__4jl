@@ -1,6 +1,7 @@
 let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
 argglobal
-setlocal fdm=manual
+if bufexists('~/Documents/adventofcode2018/4/4.jl') | buffer ~/Documents/adventofcode2018/4/4.jl | else | edit ~/Documents/adventofcode2018/4/4.jl | endif
+setlocal fdm=diff
 setlocal fde=0
 setlocal fmr={{{,}}}
 setlocal fdi=#
@@ -8,16 +9,6 @@ setlocal fdl=0
 setlocal fml=1
 setlocal fdn=20
 setlocal fen
-silent! normal! zE
-6,24fold
-26,33fold
-35,70fold
-72,79fold
-90,115fold
-72
-normal! zo
-90
-normal! zo
 let &so = s:so_save | let &siso = s:siso_save
 doautoall SessionLoadPost
 " vim: set ft=vim :
