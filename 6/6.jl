@@ -1,11 +1,12 @@
 const ArrayOfXY = Array{Array{Int,1},1}
 const Board = Array{Union{Int,Nothing},2}
 
-function readinput(filename::String="6.in")::ArrayOfXY
+function readinput(filename::String="62.in")::ArrayOfXY
     """
     in: filename::String
     Parses a file and extracts the digits of each tuple for each line
-    out: Array of x,y coordinates. The index of each array element serves as its unique id
+    out: Array of x,y coordinates. The index of each coordinate in the array
+    serves as its unique identifer
     """
     arrayofXY = ArrayOfXY()
     open(filename, "r") do fh
