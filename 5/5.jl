@@ -1,12 +1,25 @@
+import Base.isempty
+
 function react(instring::String, exclusionlist::Char...)
     # old @time = 52.356412 seconds (76.84 k allocations: 12.560 MiB, 0.01% gc time)
     # new @time = 0.007507 seconds (100.00 k allocations: 4.722 MiB)
+    """
+    Iterate over the `instring` and decide whether to put each character in the
+    IOBuffer At the end, dump all the characters in IOBuffer out into an
+    `outstring`
+
+    Because characters cannot be removed from the IOBuffer, only overwritten,
+    we use io.ptr to track where the last character should be instead. To
+    'remove' a character we simply decrement io.ptr by 1.  Then we simply read
+    from the first character up to the last character in order to get the
+    `outstring`
+    """
     io = IOBuffer()
     for char in instring
         if char in exclusionlist
             continue
         end
-        if position(io) != 0 && checkpolarity(char, nthchar(io, io.ptr - 1))
+        if !isempty(io) && checkpolarity(char, nthchar(io, io.ptr - 1))
             io.ptr -= 1
         else
             write(io, char)
@@ -23,7 +36,7 @@ function main()
     println("The length of the reacted polymer is $(length(react(bigstring)))")
     # Question 5b
     shortestlength::Union{Int,Nothing} = nothing
-    removedchar = '\0'
+    removedchar::Union{Char,Nothing} = nothing
     for ch in 'a':'z'
         len = length(react(bigstring, ch, ch - 32))
         if shortestlength isa Nothing || len < shortestlength
@@ -35,6 +48,9 @@ function main()
 end
 
 # helper functions
+@inline function isempty(io::IOBuffer)
+    io.ptr == 1
+end
 @inline function checkpolarity(c1::Char, c2::Char)
     c1 + 32 == c2 || c2 + 32 == c1
 end
@@ -47,7 +63,7 @@ end
     str
 end
 @inline function dumpstr(io::IOBuffer, int::Int)
-    "dump io as String up to `int` bytes"
+    "dump io as String up to `int` bytes (characters)"
     ptr = io.ptr
     seekstart(io)
     str = String(map(Char, read(io, int)))
@@ -62,3 +78,5 @@ end
     io.ptr = ptr
     ch
 end
+
+isinteractive() || @time main()

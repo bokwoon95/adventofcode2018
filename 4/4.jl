@@ -5,7 +5,7 @@ import DelimitedFiles
 
 function sortbydate(strarray::Array{String,1})
     """
-    Takes in an array of strings, extracts the dates
+    Takes in an array of strings, parses the dates
     and sorts the strings by the dates. Returns an array
     of the sorted strings
     """
@@ -43,21 +43,18 @@ function arraytodict(strarraysorted::Array{String})
     ls = LoopStatus(nothing, nothing, nothing)
     for str in strarraysorted
         dt = DateTime(match(r"^\[(?<dt>.+)\]", str)[:dt], "yyyy-mm-dd HH:MM")
-        re = match(r"Guard #(?<id>\d+)", str)
-        if re isa RegexMatch
-            id = tryparse(Int, re[:id])
-            if ls.id isa Nothing
-                ls.id = id
-            else
+        if (re = match(r"Guard #(?<id>\d+)", str)) isa RegexMatch
+            id = parse(Int, re[:id])
+            if !(ls.id isa Nothing)
                 if haskey(dict, ls.id)
                     push!(dict[ls.id], schedule)
                 else
                     dict[ls.id] = [schedule]
                 end
-                ls.id = id
-                ls.sleep_start = nothing
-                ls.sleep_end = nothing
             end
+            ls.id = id
+            ls.sleep_start = nothing
+            ls.sleep_end = nothing
             schedule = zeros(Int, 60)
         elseif match(r"falls asleep", str) isa RegexMatch
             ls.sleep_start = Dates.minute(dt)
@@ -96,7 +93,7 @@ function question4(dict::Dict{Int64,Array{Array{Int64,1},1}})
         hoursslept_A = reduce(+, array1D, dims=1)[1,1]
         worstminute = findmax(array1D, dims=1)[2][1,1][1] - 1
         hoursslept_B = findmax(array1D, dims=1)[1][1,1]
-        println("#$id, $hoursslept_A total hours slept, slept the most ($hoursslept_B hours) at $worstminute min")
+        #= println("#$id, $hoursslept_A total hours slept, slept the most ($hoursslept_B hours) at $worstminute min") =#
         if hoursslept_A > fourA.hoursslept
             fourA.id = id
             fourA.hoursslept = hoursslept_A
@@ -124,4 +121,4 @@ function main()
     question4(dict)
 end
 
-isinteractive() || main()
+isinteractive() || @time main()
