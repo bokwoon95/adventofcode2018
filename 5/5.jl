@@ -4,13 +4,13 @@ function react(instring::String, exclusionlist::Char...)
     # old @time = 52.356412 seconds (76.84 k allocations: 12.560 MiB, 0.01% gc time)
     # new @time = 0.007507 seconds (100.00 k allocations: 4.722 MiB)
     """
-    Iterate over the `instring` and decide whether to put each character in the
-    IOBuffer At the end, dump all the characters in IOBuffer out into an
-    `outstring`
+    Iterate over the `instring` character by character and decide whether to
+    put it in the IOBuffer. At the end, dump all the characters in IOBuffer out
+    into an `outstring`
 
     Because characters cannot be removed from the IOBuffer, only overwritten,
     we use io.ptr to track where the last character should be instead. To
-    'remove' a character we simply decrement io.ptr by 1.  Then we simply read
+    'remove' a character we simply move io.ptr back by 1.  Then we simply read
     from the first character up to the last character in order to get the
     `outstring`
     """
