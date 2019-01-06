@@ -1,5 +1,12 @@
+module Hello
+export foo
+function foo()
+    println("yeetus deletus")
+end
+end
+
 function main()
-    println(deps)
+    Hello.foo()
 end
 
 isinteractive() || main()
