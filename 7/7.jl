@@ -1,5 +1,3 @@
-import Base.push!
-
 function readparseinput(filename::String)
     "parses a file, returns an array of tuples (requires, dependency)"
     open(filename, "r") do fh
@@ -11,7 +9,32 @@ function readparseinput(filename::String)
             end
         end
         arr
-    end
+    end::Vector{Tuple{Char,Char}}
+end
+
+mutable struct FlexList{T}
+"FlexList works like an iterable array, except you can dynamically change the
+body of the flexlist while you are iterating over it. At any one time you only
+have to read the head of the FlexList, allowing for elements to be freely
+inserted into and deleted from the body without affecting the head. At the end
+of the loop call next!() on the FlexList to push the next element of the body
+into the head. When there are no more elements in the body, the head is
+assigned `nothing`. The termination condition of a flexlist iteration is thus
+when the head isa Nothing"
+    head::Union{T,Nothing}
+    body::Vector{T}
+end
+@inline function init(::Type{FlexList{T}}, arr::Vector{T}) where T
+    head = popfirst!(arr)
+    body = arr
+    FlexList{T}(head, body)
+end
+@inline function next!(flx::FlexList{T}) where T
+    if length(flx.body) == 0
+        flx.head = nothing
+    else
+        flx.head = popfirst!(flx.body)
+    end::Union{T,Nothing}
 end
 
 function resolve_dependencies(dependency_array::Vector{Tuple{Char,Char}})
@@ -41,54 +64,26 @@ function resolve_dependencies(dependency_array::Vector{Tuple{Char,Char}})
         end
     end
 
-    itrflux = ItrFluxx.init(sort!(dependencyfree))
-    finalstr_buf = IOBuffer()
-
-    while !(itrflux.head isa Nothing)
-        write(finalstr_buf, itrflux.head)
+    flx = init(FlexList{Char}, sort!(dependencyfree))
+    str_buf = IOBuffer()
+    ### Start Here ###
+    while !(flx.head isa Nothing)
+        write(str_buf, flx.head)
         for k in keys(dependency_graph)
-            removeall!(dependency_graph[k], itrflux.head)
+            removeall!(dependency_graph[k], flx.head)
         end
-        popped_A = popempty!(dependency_graph)
-        push!(itrflux, popped_A)
+        push!(flx.body, popempty!(dependency_graph)...)
+        sort!(flx.body)
+        next!(flx)
     end
-
-    dumpstr(finalstr_buf)
+    dumpstr(str_buf)::String
 end
 
-module ItrFluxx
-import Base.push!
-
-mutable struct FlexList{T}
-    head::Union{T,Nothing}
-    body::Vector{T}
-end
-
-function init(arr::Vector{T}) where T
-    head = popfirst!(arr)
-    body = arr
-    flx = FlexList{T}(head, body)
-end
-
-function push!(flx::FlexList{T}, arr::Vector{T}) where T
-    #= push!(flx.body, arr...) =#
-    if length(flx.body) == 0 && length(arr) == 0
-        flx.head = nothing
-    else
-        push!(flx.body, arr...)
-        flx.head = popfirst!(sort!(flx.body))
-    end
-    nothing
-end
-
-end # module ItrFlux
-
-### Start Here ###
 function main()
     # Question 7a
     dependency_array = readparseinput("7.in")
     ans7a = resolve_dependencies(dependency_array)
-    println("The correct steps should be: $ans7a")
+    println("The correct steps should be: $ans7a");
 end
 
 # helper functions
@@ -98,7 +93,7 @@ end
     seekstart(io)
     str = String(map(Char, read(io)))
     io.ptr = ptr
-    str
+    str::String
 end
 @inline function removeall!(arr::Vector{T}, t::T) where T
     "Remove all instances of t::T from arr::Vector{T}"
@@ -108,19 +103,19 @@ end
             push!(indices, i)
         end
     end
-    deleteat!(arr, indices)
+    deleteat!(arr, indices);
 end
 @inline function popempty!(dict::Dict{T,Vector{T}}) where T
     "deletes all keys with empty value arrays in the dictionary and returns the
     list of deleted keys"
-    deleted = Array{T,1}()
+    deleted = Vector{T}()
     for k in keys(dict)
         if dict[k] == Array{T,1}()
             delete!(dict, k)
             push!(deleted, k)
         end
     end
-    deleted
+    deleted::Vector{T}
 end
 
 isinteractive() || @time main()
