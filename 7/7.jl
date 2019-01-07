@@ -1,7 +1,8 @@
 const InputArray = Array{Tuple{Char,Char},1}
 const Graph = Dict{Char,Array{Char,1}}
 
-function readinput(filename::String)
+function readparseinput(filename::String)
+    "parses a file, returns an array of tuples (:requires, :dependency)"
     open(filename, "r") do fh
         arr = InputArray()
         rx = r"^Step (?<dependency>[A-Z]) must be finished before step (?<requires>[A-Z]) can begin"
@@ -14,8 +15,7 @@ function readinput(filename::String)
     end
 end
 
-function resolvedeps(inputarray::InputArray)
-    fh = open("7.log", "w")
+function resolve_dependencies(inputarray::InputArray)
 
     @inline function makegraph(inputarray::InputArray)
         "Given an inputarray of requirements, construct a dependency graph out
@@ -33,58 +33,29 @@ function resolvedeps(inputarray::InputArray)
         graph
     end
 
-    @inline function removeall!(arr::Array{T,1}, t::T) where {T}
-        "Remove all instances of t::T from arr::Array{T,1}"
-        indices = Int[]
-        for i in eachindex(arr)
-            if arr[i] == t
-                push!(indices, i)
-            end
-        end
-        deleteat!(arr, indices)
-    end
+    graph = makegraph(inputarray)
+    graph_dc = deepcopy(graph) # make a copy for graph deconstruction
+    finalstr_buf = IOBuffer()
 
-    function popempty!(dict::Dict{T,Array{T,1}}) where {T}
-        "deletes all keys with empty value arrays in the dictionary and returns the
-        list of deleted keys"
-        deleted = Array{T,1}()
-        for k in keys(dict)
-            if dict[k] == Array{T,1}()
-                delete!(dict, k)
-                push!(deleted, k)
-            end
-        end
-        deleted
-    end
+    itrflux = ItrFlux.init(inputarray)
 
-    global graph = makegraph(inputarray)
-    global graph_dc = deepcopy(graph) # make a copy for graph deconstruction
-    global finalstr_buf = IOBuffer()
-
-    available = FluxItr.init(inputarray)
-    println(available)
-
-    failsafe = 1
-    while !(available.head isa Nothing)
-        write(finalstr_buf, available.head)
+    failsafe = 50
+    while !(itrflux.head isa Nothing)
+        write(finalstr_buf, itrflux.head)
         for k in keys(graph_dc)
-            removeall!(graph_dc[k], available.head)
+            removeall!(graph_dc[k], itrflux.head)
         end
         popped_A = popempty!(graph_dc)
-        FluxItr.push!(available, popped_A)
+        push!(itrflux, popped_A)
         failsafe-=1; if failsafe<=0 println("failsafe activated");break end
     end
-    println(dumpstr(finalstr_buf))
-    println(String(t.body))
 
-    close(fh)
+    dumpstr(finalstr_buf)
 end
 
-module FluxItr
-import Base.push!
-
+module ItrFlux
 const InputArray = Array{Tuple{Char,Char},1}
-const Graph = Dict{Char,Array{Char,1}}
+import Base.push!
 
 mutable struct T
     head::Union{Char,Nothing}
@@ -110,14 +81,8 @@ function init(inputarray::InputArray)
     t
 end
 
-# TODO Run @M 7. Why does this fail?
-#= ERROR: MethodError: no method matching push!(::Main.FluxItr.T, ::Array{Char,1}) =#
-#= Closest candidates are: =#
-#=   push!(::Any, ::Any, ::Any) at abstractarray.jl:2064 =#
-#=   push!(::Any, ::Any, ::Any, ::Any...) at abstractarray.jl:2065 =#
-#=   push!(::Array{Any,1}, ::Any) at array.jl:862 =#
-function push!(t::T, arr::Array{T,1})
-    if length(arr) == 0
+function push!(t::T, arr::Array{Char,1})
+    if length(t.body) == 0 && length(arr) == 0
         t.head = nothing
     else
         push!(t.body, arr...)
@@ -126,22 +91,48 @@ function push!(t::T, arr::Array{T,1})
     nothing
 end
 
-end #FluxItr
+end #ItrFlux
 
+### Start Here ###
 function main()
     # Question 7a
-    global inputarray = readinput("7.in")
-    resolvedeps(inputarray)
+    inputarray = readparseinput("7.in")
+    println("The correct steps should be: " * resolve_dependencies(inputarray))
 end
 
 # helper functions
 @inline function dumpstr(io::IOBuffer)
-    "dump io as String"
+    "dump IOBuffer as String without affecting the internal ptr"
     ptr = io.ptr
     seekstart(io)
     str = String(map(Char, read(io)))
     io.ptr = ptr
     str
+end
+@inline function removeall!(arr::Array{T,1}, t::T) where {T}
+    "Remove all instances of t::T from arr::Array{T,1}"
+    indices = Int[]
+    for i in eachindex(arr)
+        if arr[i] == t
+            push!(indices, i)
+        end
+    end
+    deleteat!(arr, indices)
+end
+@inline function popempty!(dict::Dict{T,Array{T,1}}) where {T}
+    "deletes all keys with empty value arrays in the dictionary and returns the
+    list of deleted keys"
+    deleted = Array{T,1}()
+    for k in keys(dict)
+        if dict[k] == Array{T,1}()
+            delete!(dict, k)
+            push!(deleted, k)
+        end
+    end
+    deleted
+end
+import Base.foreach
+function foreach(f::Function, dict::Dict)
 end
 
 isinteractive() || @time main()
