@@ -10,20 +10,17 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 1,13fold
-1,13fold
-24,38fold
-15,38fold
-40,80fold
-90,97fold
-98,107fold
-108,119fold
-1
-normal! zo
-1
-normal! zo
-15
-normal! zo
-24
+17,42fold
+44,70fold
+72,89fold
+93,130fold
+132,154fold
+168,175fold
+176,185fold
+186,197fold
+198,200fold
+201,203fold
+132
 normal! zo
 let &so = s:so_save | let &siso = s:siso_save
 doautoall SessionLoadPost

@@ -1,4 +1,4 @@
-function readparseinput(filename::String)
+@inline function readparseinput(filename::String)
     "parses a file, returns an array of tuples (requires, dependency)"
     open(filename, "r") do fh
         arr = Vector{Tuple{Char,Char}}()
@@ -12,7 +12,10 @@ function readparseinput(filename::String)
     end::Vector{Tuple{Char,Char}}
 end
 
-mutable struct FlexList{T}
+# Question 7a
+
+module FlexList
+mutable struct Dt{T}
 "FlexList works like an iterable array, except you can dynamically change the
 body of the flexlist while you are iterating over it. At any one time you only
 have to read the head of the FlexList, allowing for elements to be freely
@@ -24,23 +27,23 @@ when the head isa Nothing"
     head::Union{T,Nothing}
     body::Vector{T}
 end
-@inline function init(::Type{FlexList{T}}, arr::Vector{T}) where T
+@inline function init(arr::Vector{T}) where T
     head = popfirst!(arr)
     body = arr
-    FlexList{T}(head, body)
+    Dt{T}(head, body)
 end
-@inline function next!(flx::FlexList{T}) where T
+@inline function next!(flx::Dt{T}) where T
     if length(flx.body) == 0
         flx.head = nothing
     else
         flx.head = popfirst!(flx.body)
     end::Union{T,Nothing}
 end
+end
 
-function resolve_dependencies(dependency_array::Vector{Tuple{Char,Char}})
-
-    # Generate the depedency graph. A dependency graph looks like a dictionary
-    # of requires::Char => depedencies::Vector{Char}
+@inline function generate_dependency_graph(dependency_array::Vector{Tuple{Char,Char}})
+    # Generate the dependency graph. A dependency graph looks like a dictionary
+    # of requires::Char => dependencies::Vector{Char}
     dependency_graph = Dict{Char,Vector{Char}}()
     reqs = Set{Char}()
     deps = Set{Char}()
@@ -57,33 +60,108 @@ function resolve_dependencies(dependency_array::Vector{Tuple{Char,Char}})
     end
 
     # Obtain the initial dependency-free elements to start solving with
-    dependencyfree = Vector{Char}()
+    dependency_free = Vector{Char}()
     for dep in deps
         if !(dep in reqs)
-            push!(dependencyfree, dep)
+            push!(dependency_free, dep)
         end
     end
+    dependency_graph, dependency_free
+end
 
-    flx = init(FlexList{Char}, sort!(dependencyfree))
+@inline function resolve_dependencies(dependency_graph::Dict{Char,Vector{Char}}, dependency_free::Vector{Char})
+    dependency_graph = deepcopy(dependency_graph)
+    dependency_free = deepcopy(dependency_free)
+    flx = FlexList.init(sort!(dependency_free))
     str_buf = IOBuffer()
+
     ### Start Here ###
-    while !(flx.head isa Nothing)
+    while truthy(flx.head)
         write(str_buf, flx.head)
         for k in keys(dependency_graph)
             removeall!(dependency_graph[k], flx.head)
         end
         push!(flx.body, popempty!(dependency_graph)...)
         sort!(flx.body)
-        next!(flx)
+        FlexList.next!(flx)
     end
     dumpstr(str_buf)::String
 end
 
+# Question 7b
+
+module SweatShop
+import Main.FlexList
+mutable struct Dt
+    t::Vector{Vector{Union{Char,Int,Nothing}}}
+    length::Int
+    available::Vector{Int}
+end
+@inline function init(n::Int)
+    arr = Dt.types[1]()
+    length = n
+    available = collect(1:n)
+    for i in 1:n
+        push!(arr, [nothing, 0])
+    end
+    Dt(arr, length, available)
+end
+@inline function allocate!(swsh::Dt, flx::FlexList.Dt)
+    while length(swsh.available) != 0 && !(flx.head isa Nothing)
+        swsh.t[popfirst!(swsh.available)] = [flx.head, gettime(flx.head)]
+        FlexList.next!(flx)
+    end
+    length(swsh.available) != 00, !(flx.head isa Nothing)
+end
+@inline function free!(swsh::Dt)
+    min::Union{Int,Nothing} = nothing
+    for i in eachindex(swsh.t)
+        if min isa Nothing || swsh.t[i][2] < min
+            min = swsh.t[i][2]
+            println("min is $min")
+        end
+    end
+    for i in eachindex(swsh.t)
+        swsh.t[i][2] - min
+    end
+    min
+end
+@inline gettime(ch::Char) = Int(ch) - 4
+end
+
+function calculatetime(dependency_graph::Dict{Char,Vector{Char}}, dependency_free::Vector{Char})
+    global swsh = SweatShop.init(5)
+    global flx = FlexList.init(sort!(dependency_free))
+    elapsed = 0
+    while truthy(flx.head)
+        for k in keys(dependency_graph)
+            removeall!(dependency_graph[k], flx.head)
+        end
+        loop = true; while loop
+            swsh_full, flx_empty = SweatShop.allocate!(swsh, flx)
+            if swsh_full && !flx_empty
+                elapsed += SweatShop.free!(swsh)
+            elseif flx_empty && !swsh_full
+                loop = false; break
+            end
+        end
+        push!(flx.body, popempty!(dependency_graph)...)
+        sort!(flx.body)
+        elapsed += 1
+        FlexList.next!(flx)
+    end
+    elapsed
+end
+
 function main()
-    # Question 7a
     dependency_array = readparseinput("7.in")
-    ans7a = resolve_dependencies(dependency_array)
+    dependency_graph, dependency_free = generate_dependency_graph(dependency_array)
+    # Question 7a
+    ans7a = resolve_dependencies(dependency_graph, dependency_free)
     println("The correct steps should be: $ans7a");
+    # Question 7b
+    ans7b = calculatetime(dependency_graph, dependency_free)
+    println("The time taken to complete all the steps is: $ans7b");
 end
 
 # helper functions
@@ -110,12 +188,18 @@ end
     list of deleted keys"
     deleted = Vector{T}()
     for k in keys(dict)
-        if dict[k] == Array{T,1}()
+        if dict[k] == Vector{T}()
             delete!(dict, k)
             push!(deleted, k)
         end
     end
     deleted::Vector{T}
 end
+truthy(b::Bool) = b
+truthy(i::Int) = i != 0
+truthy(x::Any) = !(x isa Nothing || x isa Missing)
+falsy(b::Bool) = !b
+falsy(i::Int) = i == 0
+falsy(x::Any) = x isa Nothing || x isa Missing
 
 isinteractive() || @time main()
